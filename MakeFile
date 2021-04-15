@@ -1,0 +1,5 @@
+sanitize:
+	gcc terminal.c -o terminal -fsanitize=address
+
+all:
+	gcc terminal.c -o terminal
