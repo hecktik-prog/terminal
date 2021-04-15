@@ -9,6 +9,10 @@
 #define blocksize 128
 #define ControlChars " \t\r\n\a"
 
+//глобальные переменные
+pid_t pid;  //идентификатор процесса
+pid_t wpid; //идентификатор дочерного процесса
+
 //метод, реализующий основной цикл обработки команд
 void InteractingFunc();
 
@@ -18,6 +22,26 @@ char* CommandReadingFunc();
 //метод для парсинга строки
 char** LineParsingFunc(char* line //введённая строка
                       );
+//метод для запуска процессов
+int ProcessLaunchingFunc(char** args //массив команд и аргументов
+                        );
+
+//метод для выполнения команды выхода
+int exiting(char** args);
+
+//метод для выполнения команды "помощь"
+int help(char** args);
+
+//метод для выполнения команды смены каталога
+int cd(char** args);
+
+//массив, содержащий встроенные в оболочку команды
+char* commands[] = {"cd","help","exit"};
+
+//массив указателей на функции, соответствующие встроенным командам
+int (*CommandsFuncs[])(char**)= {&cd,&help,&exiting};
+
+#define CommandsAmount (sizeof(commands)/sizeof(commands[0]))
 
 int main(int argc,char** argv)
 {
@@ -102,4 +126,73 @@ char** LineParsingFunc(char* line)
   //заверешение массива через NULL
   parts[i]=NULL;
   return parts;
+}
+
+int ProcessLaunchingFunc(char** args)
+{
+  int status; //состояние дочерного процесса
+  
+  //создание нового процесса
+  pid = fork();
+  
+  //дочерний процесс
+  if (pid == 0)
+  {
+    //запуск команды, заданной пользователем
+    if (execvp(args[0],args)== -1)
+    {
+      perror("ProcessLaunchingFunc(): Ошибка!\n");
+    }
+    exit(EXIT_FAILURE);
+  }
+  //если выполнение fork() произошло с ошибкой
+  else if (pid < 0)
+  {
+    perror("ProcessLaunchingFunc(): Ошибка при работе fork()!\n");
+  }
+  //родительский процесс
+  else
+  {
+    do
+    {
+      //ожидание состояния процесса
+      wpid = waitpid(pid,&status, WUNTRACED);
+      //пока дочерний процесс не завершился
+    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+  }
+  
+  return 1;
+}
+
+int exiting(char** args)
+{
+  return 0;
+}
+
+int cd(char** args)
+{
+  //если пользователь не ввёл каталог, куда перемещаться
+  if (args[1] == NULL)
+  {
+    printf("cd: Oшибка! Для команды ожидается аргумент\n");
+  }
+  else
+  {
+    //если не удалось сменить каталог
+    if (chdir(args[1]) !=0)
+    {
+      perror("cd: Ошибка при попытке сменить каталог!\n");
+    }
+  }
+  return 1;
+}
+
+int help(char** args)
+{
+  printf("Список команд:\n");
+  for (int i = 0; i < CommandsAmount; ++i)
+  {
+    printf("%s\n",commands[i]);
+  }
+  return 1;
 }
