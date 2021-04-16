@@ -8,10 +8,12 @@
 
 #define blocksize 128
 #define ControlChars " \t\r\n\a"
+#define enter 13
 
 //глобальные переменные
 pid_t pid;  //идентификатор процесса
 pid_t wpid; //идентификатор дочерного процесса
+char press; //перемения для контроля за нажатием кнопки
 
 //метод, реализующий основной цикл обработки команд
 void InteractingFunc();
@@ -46,6 +48,9 @@ int (*CommandsFuncs[])(char**)= {&cd,&help,&exiting};
 
 #define CommandsAmount (sizeof(commands)/sizeof(commands[0]))
 
+//метод, вызывающийся при получении сигнала прерывания
+void KillProcess(int sig);
+
 int main(int argc,char** argv)
 {
 
@@ -63,12 +68,26 @@ void InteractingFunc()
   char** tokens;  //массив введённых команд, аргументов
   int choice;     //переменная для выхода из цикла
   char PathName[PATH_MAX]; //массив для помещения пути
+   
+  //обработка сигнала прерывания
+  struct sigaction act;
+  act.sa_handler = KillProcess;
+  sigemptyset(&act.sa_mask);
+  act.sa_flags = 0;
   
   do
   {
     //получение пути к текущему каталогу
     getcwd(PathName,sizeof(PathName));
-    printf("%s $",PathName);
+    printf("%s $ ",PathName);
+    
+    //при получении сигнала прерывания процесса
+    sigaction(SIGINT,&act,0);
+    if (press == enter)
+    {
+      printf("%s $",PathName);
+    }
+    
     //считывание введённой строки
     line = CommandReadingFunc();
     //выделение команд, аргументов
@@ -188,6 +207,17 @@ int DeterminatingFunc(char** args)
   }
   //запуск процесса
   return ProcessLaunchingFunc(args);
+}
+
+void KillProcess(int sig)
+{
+  if (pid == 0)
+  {
+    //уничтожение процесса
+    kill(pid,sig);
+  }
+  printf("\n");
+  press = getchar();
 }
 
 int exiting(char** args)
