@@ -25,6 +25,9 @@ char** LineParsingFunc(char* line //введённая строка
 //метод для запуска процессов
 int ProcessLaunchingFunc(char** args //массив команд и аргументов
                         );
+                        
+//метод для определения, что будет запускаться
+int DeterminatingFunc(char** args);
 
 //метод для выполнения команды выхода
 int exiting(char** args);
@@ -70,6 +73,9 @@ void InteractingFunc()
     line = CommandReadingFunc();
     //выделение команд, аргументов
     tokens = LineParsingFunc(line);
+    //определение дальнейшего действия
+    choice = DeterminatingFunc(tokens);
+    
     //очищение выделенной памяти
     free(line);
     free(tokens);
@@ -162,6 +168,26 @@ int ProcessLaunchingFunc(char** args)
   }
   
   return 1;
+}
+
+int DeterminatingFunc(char** args)
+{
+  //введена пустая строка
+  if (args[0] == NULL)
+  {
+    return 1;
+  }
+  
+  //проверка на совпадение с встроенной командой
+  for (int i = 0; i < CommandsAmount; i++)
+  {
+    if (strcmp(args[0],commands[i]) == 0)
+    {
+      return (*CommandsFuncs[i])(args);
+    }
+  }
+  //запуск процесса
+  return ProcessLaunchingFunc(args);
 }
 
 int exiting(char** args)
