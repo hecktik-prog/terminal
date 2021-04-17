@@ -78,7 +78,11 @@ void InteractingFunc()
   do
   {
     //получение пути к текущему каталогу
-    getcwd(PathName,sizeof(PathName));
+    if (getcwd(PathName,sizeof(PathName)) == NULL)
+    {
+      printf("InteractingFunc(): Ошибка определения пути до текущего каталога!\n");
+      exit(EXIT_FAILURE);
+    }
     printf("%s $ ",PathName);
     
     //при получении сигнала прерывания процесса
@@ -108,7 +112,11 @@ char* CommandReadingFunc()
   ssize_t sizeofblock = 0; //размер считываемого блока
   
   //чтение из потока stdin
-  getline(&line,&sizeofblock,stdin);
+  if (getline(&line,&sizeofblock,stdin) == -1)
+  {
+    printf("CommandReadingFunc(): Ошибка считывания строки!\n");
+    exit(EXIT_FAILURE);
+  }
   
   return line;
 }
@@ -129,6 +137,7 @@ char** LineParsingFunc(char* line)
   
   //первое выделение
   str = strtok(line,ControlChars);
+  
   while (str!= NULL)
   {
     parts[i] = str; //запись новой лексемы
